@@ -34,7 +34,7 @@ interface GitHubLabel {
   name: string;
 }
 
-interface GitHubUser {
+interface GitHubUser { 
   login: string;
 }
 
