@@ -43,7 +43,7 @@ interface GitHubPR {
   title: string;
   merged_at: string | null;
   labels: GitHubLabel[];
-  user: GitHubUser;
+  user: GitHubUser; 
   html_url: string;
 }
 
