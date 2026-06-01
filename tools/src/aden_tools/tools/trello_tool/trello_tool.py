@@ -41,8 +41,7 @@ def register_tools(
             return {
                 "error": "Trello credentials not configured",
                 "help": (
-                    "Set TRELLO_API_KEY and TRELLO_API_TOKEN environment variables "
-                    "or configure via credential store"
+                    "Set TRELLO_API_KEY and TRELLO_API_TOKEN environment variables or configure via credential store"
                 ),
             }
         return TrelloClient(api_key, api_token)
@@ -55,8 +54,7 @@ def register_tools(
                 "error": f"limit must be between {limit_min} and {limit_max}",
                 "field": "limit",
                 "help": (
-                    "Reduce the limit or paginate by calling again with a smaller "
-                    "limit to fetch additional results."
+                    "Reduce the limit or paginate by calling again with a smaller limit to fetch additional results."
                 ),
             }
         return None
@@ -304,3 +302,79 @@ def register_tools(
             attachment_url=attachment_url,
             name=name,
         )
+
+    @mcp.tool()
+    def trello_get_card(
+        card_id: str,
+        fields: list[str] | None = None,
+    ) -> dict:
+        """
+        Get full details of a Trello card.
+
+        Returns all card fields including members, checklists, and attachments.
+
+        Args:
+            card_id: Trello card id
+            fields: Optional list of card fields to return (e.g., ["name", "desc",
+                "url", "due", "labels"] or ["all"]). Defaults to all fields.
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        return client.get_card(card_id=card_id, fields=fields)
+
+    @mcp.tool()
+    def trello_create_list(
+        board_id: str,
+        name: str,
+        pos: str | None = None,
+    ) -> dict:
+        """
+        Create a new list on a Trello board.
+
+        Args:
+            board_id: Trello board id to create the list in
+            name: Name for the new list
+            pos: Optional position ("top", "bottom", or numeric string)
+        """
+        if not name:
+            return {"error": "List name is required"}
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        return client.create_list(board_id=board_id, name=name, pos=pos)
+
+    @mcp.tool()
+    def trello_search_cards(
+        query: str,
+        board_id: str | None = None,
+        limit: int = 10,
+    ) -> dict:
+        """
+        Search for Trello cards by keyword.
+
+        Full-text search across card names, descriptions, and comments.
+
+        Args:
+            query: Search query text
+            board_id: Optional board id to restrict search scope
+            limit: Max number of card results (1-1000, default 10)
+        """
+        if not query:
+            return {"error": "Search query is required"}
+        limit_error = _validate_limit(limit)
+        if limit_error:
+            return limit_error
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        result = client.search(
+            query=query,
+            model_types="cards",
+            cards_limit=limit,
+            board_id=board_id,
+        )
+        if isinstance(result, dict) and "error" in result:
+            return result
+        cards = result.get("cards", [])
+        return {"cards": cards, "count": len(cards)}

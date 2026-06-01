@@ -254,9 +254,7 @@ class TestGaRunReport:
         """Register GA tools with credentials set (for input validation tests)."""
         monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/fake/path.json")
         with (
-            patch(
-                "aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"
-            ),
+            patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"),
             patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.Credentials"),
         ):
             mcp = MagicMock()
@@ -397,9 +395,7 @@ class TestGaGetRealtime:
         """Register GA tools with credentials set (for input validation tests)."""
         monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/fake/path.json")
         with (
-            patch(
-                "aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"
-            ),
+            patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"),
             patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.Credentials"),
         ):
             mcp = MagicMock()
@@ -520,9 +516,7 @@ class TestGaGetTopPages:
         """Register GA tools with credentials set (for input validation tests)."""
         monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/fake/path.json")
         with (
-            patch(
-                "aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"
-            ),
+            patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"),
             patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.Credentials"),
         ):
             mcp = MagicMock()
@@ -631,9 +625,7 @@ class TestGaGetTrafficSources:
         """Register GA tools with credentials set (for input validation tests)."""
         monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/fake/path.json")
         with (
-            patch(
-                "aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"
-            ),
+            patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.BetaAnalyticsDataClient"),
             patch("aden_tools.tools.google_analytics_tool.google_analytics_tool.Credentials"),
         ):
             mcp = MagicMock()
@@ -650,9 +642,7 @@ class TestGaGetTrafficSources:
 
     def test_limit_validation(self, ga_tools_with_creds):
         """Limit bounds are checked."""
-        result = ga_tools_with_creds["ga_get_traffic_sources"](
-            property_id="properties/123", limit=10001
-        )
+        result = ga_tools_with_creds["ga_get_traffic_sources"](property_id="properties/123", limit=10001)
         assert "error" in result
         assert "limit" in result["error"].lower()
 
@@ -723,8 +713,8 @@ class TestGaGetTrafficSources:
 class TestToolRegistration:
     """Tests for tool registration in register_all_tools."""
 
-    def test_register_tools_registers_all_four_tools(self):
-        """register_tools registers exactly 4 GA tool functions."""
+    def test_register_tools_registers_all_seven_tools(self):
+        """register_tools registers exactly 7 GA tool functions."""
         mcp = MagicMock()
         registered_fns = {}
         mcp.tool.return_value = lambda fn: registered_fns.update({fn.__name__: fn}) or fn
@@ -736,6 +726,9 @@ class TestToolRegistration:
             "ga_get_realtime",
             "ga_get_top_pages",
             "ga_get_traffic_sources",
+            "ga_get_user_demographics",
+            "ga_get_conversion_events",
+            "ga_get_landing_pages",
         }
         assert set(registered_fns.keys()) == expected_tools
 
@@ -768,4 +761,4 @@ class TestToolRegistration:
 
         register_tools(mcp, credentials=cred_manager)
 
-        assert len(registered_fns) == 4
+        assert len(registered_fns) == 7

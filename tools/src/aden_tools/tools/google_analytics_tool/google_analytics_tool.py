@@ -134,10 +134,7 @@ def register_tools(
         if credentials is not None:
             path = credentials.get("google_analytics")
             if path is not None and not isinstance(path, str):
-                raise TypeError(
-                    f"Expected string from credentials.get('google_analytics'), "
-                    f"got {type(path).__name__}"
-                )
+                raise TypeError(f"Expected string from credentials.get('google_analytics'), got {type(path).__name__}")
             return path
         return os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
@@ -161,9 +158,7 @@ def register_tools(
     def _validate_inputs(property_id: str, *, limit: int | None = None) -> dict[str, str] | None:
         """Validate common inputs. Returns an error dict or None."""
         if not property_id or not property_id.startswith("properties/"):
-            return {
-                "error": "property_id must start with 'properties/' (e.g., 'properties/123456')"
-            }
+            return {"error": "property_id must start with 'properties/' (e.g., 'properties/123456')"}
         if limit is not None and (limit < 1 or limit > 10000):
             return {"error": "limit must be between 1 and 10000"}
         return None
@@ -334,4 +329,123 @@ def register_tools(
             )
         except Exception as e:
             logger.warning("ga_get_traffic_sources failed: %s", e)
+            return {"error": f"Google Analytics API error: {e}"}
+
+    @mcp.tool()
+    def ga_get_user_demographics(
+        property_id: str,
+        start_date: str = "28daysAgo",
+        end_date: str = "today",
+        limit: int = 20,
+    ) -> dict:
+        """
+        Get user demographics breakdown (country, language, device).
+
+        Args:
+            property_id: GA4 property ID (e.g., "properties/123456")
+            start_date: Start date (e.g., "2024-01-01" or "28daysAgo")
+            end_date: End date (e.g., "today")
+            limit: Max rows to return (1-10000, default 20)
+
+        Returns:
+            Dict with user counts by country, language, and device category
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+
+        if err := _validate_inputs(property_id, limit=limit):
+            return err
+
+        try:
+            return client.run_report(
+                property_id=property_id,
+                metrics=["totalUsers", "sessions", "engagedSessions"],
+                dimensions=["country", "language", "deviceCategory"],
+                start_date=start_date,
+                end_date=end_date,
+                limit=limit,
+            )
+        except Exception as e:
+            logger.warning("ga_get_user_demographics failed: %s", e)
+            return {"error": f"Google Analytics API error: {e}"}
+
+    @mcp.tool()
+    def ga_get_conversion_events(
+        property_id: str,
+        start_date: str = "28daysAgo",
+        end_date: str = "today",
+        limit: int = 20,
+    ) -> dict:
+        """
+        Get conversion event counts and values.
+
+        Args:
+            property_id: GA4 property ID (e.g., "properties/123456")
+            start_date: Start date (e.g., "2024-01-01" or "28daysAgo")
+            end_date: End date (e.g., "today")
+            limit: Max rows to return (1-10000, default 20)
+
+        Returns:
+            Dict with event names, counts, conversion counts, and total revenue
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+
+        if err := _validate_inputs(property_id, limit=limit):
+            return err
+
+        try:
+            return client.run_report(
+                property_id=property_id,
+                metrics=["eventCount", "conversions", "totalRevenue"],
+                dimensions=["eventName"],
+                start_date=start_date,
+                end_date=end_date,
+                limit=limit,
+            )
+        except Exception as e:
+            logger.warning("ga_get_conversion_events failed: %s", e)
+            return {"error": f"Google Analytics API error: {e}"}
+
+    @mcp.tool()
+    def ga_get_landing_pages(
+        property_id: str,
+        start_date: str = "28daysAgo",
+        end_date: str = "today",
+        limit: int = 10,
+    ) -> dict:
+        """
+        Get top landing pages with entrance metrics.
+
+        Shows which pages users arrive on first and their engagement.
+
+        Args:
+            property_id: GA4 property ID (e.g., "properties/123456")
+            start_date: Start date (e.g., "2024-01-01" or "28daysAgo")
+            end_date: End date (e.g., "today")
+            limit: Max pages to return (1-10000, default 10)
+
+        Returns:
+            Dict with landing pages, sessions, bounce rate, and conversions
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+
+        if err := _validate_inputs(property_id, limit=limit):
+            return err
+
+        try:
+            return client.run_report(
+                property_id=property_id,
+                metrics=["sessions", "bounceRate", "conversions", "averageSessionDuration"],
+                dimensions=["landingPagePlusQueryString"],
+                start_date=start_date,
+                end_date=end_date,
+                limit=limit,
+            )
+        except Exception as e:
+            logger.warning("ga_get_landing_pages failed: %s", e)
             return {"error": f"Google Analytics API error: {e}"}

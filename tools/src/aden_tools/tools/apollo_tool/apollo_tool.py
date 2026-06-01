@@ -135,9 +135,7 @@ class _ApolloClient:
                         "name": person.get("organization", {}).get("name"),
                         "domain": person.get("organization", {}).get("primary_domain"),
                         "industry": person.get("organization", {}).get("industry"),
-                        "employee_count": person.get("organization", {}).get(
-                            "estimated_num_employees"
-                        ),
+                        "employee_count": person.get("organization", {}).get("estimated_num_employees"),
                     },
                 },
             }
@@ -253,12 +251,8 @@ class _ApolloClient:
                         "country": p.get("country"),
                         "seniority": p.get("seniority"),
                         "organization": {
-                            "id": p.get("organization", {}).get("id")
-                            if p.get("organization")
-                            else None,
-                            "name": p.get("organization", {}).get("name")
-                            if p.get("organization")
-                            else None,
+                            "id": p.get("organization", {}).get("id") if p.get("organization") else None,
+                            "name": p.get("organization", {}).get("name") if p.get("organization") else None,
                             "domain": p.get("organization", {}).get("primary_domain")
                             if p.get("organization")
                             else None,
@@ -267,6 +261,102 @@ class _ApolloClient:
                     for p in people
                 ],
             }
+        return result
+
+    def get_person_activities(
+        self,
+        person_id: str,
+    ) -> dict[str, Any]:
+        """Get activity history for a person (emails, calls, tasks)."""
+        response = httpx.get(
+            f"{APOLLO_API_BASE}/activities",
+            headers=self._headers,
+            params={"contact_id": person_id},
+            timeout=30.0,
+        )
+        result = self._handle_response(response)
+        if "error" not in result:
+            activities = result.get("activities", [])
+            return {
+                "contact_id": person_id,
+                "count": len(activities),
+                "activities": [
+                    {
+                        "id": a.get("id"),
+                        "type": a.get("type"),
+                        "subject": a.get("subject"),
+                        "body": (a.get("body") or "")[:500],
+                        "created_at": a.get("created_at"),
+                        "completed_at": a.get("completed_at"),
+                        "status": a.get("status"),
+                        "priority": a.get("priority"),
+                    }
+                    for a in activities[:50]
+                ],
+            }
+        return result
+
+    def list_email_accounts(self) -> dict[str, Any]:
+        """List email accounts connected to Apollo."""
+        response = httpx.get(
+            f"{APOLLO_API_BASE}/email_accounts",
+            headers=self._headers,
+            timeout=30.0,
+        )
+        result = self._handle_response(response)
+        if "error" not in result:
+            accounts = result.get("email_accounts", [])
+            return {
+                "count": len(accounts),
+                "email_accounts": [
+                    {
+                        "id": a.get("id"),
+                        "email": a.get("email"),
+                        "type": a.get("type"),
+                        "active": a.get("active"),
+                        "default": a.get("default"),
+                        "last_synced_at": a.get("last_synced_at"),
+                        "sending_daily_limit": a.get("sending_daily_limit"),
+                        "emails_sent_today": a.get("emails_sent_today"),
+                    }
+                    for a in accounts
+                ],
+            }
+        return result
+
+    def bulk_enrich_people(
+        self,
+        details: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Bulk enrich up to 10 people at once."""
+        body: dict[str, Any] = {"details": details[:10]}
+        response = httpx.post(
+            f"{APOLLO_API_BASE}/people/bulk_match",
+            headers=self._headers,
+            json=body,
+            timeout=60.0,
+        )
+        result = self._handle_response(response)
+        if "error" not in result:
+            matches = result.get("matches", [])
+            enriched = []
+            for m in matches:
+                if m is None:
+                    enriched.append({"match_found": False})
+                    continue
+                enriched.append(
+                    {
+                        "match_found": True,
+                        "id": m.get("id"),
+                        "name": m.get("name"),
+                        "title": m.get("title"),
+                        "email": m.get("email"),
+                        "email_status": m.get("email_status"),
+                        "linkedin_url": m.get("linkedin_url"),
+                        "organization_name": (m.get("organization") or {}).get("name"),
+                    }
+                )
+            return {"count": len(enriched), "results": enriched}
         return result
 
     def search_companies(
@@ -340,9 +430,7 @@ def register_tools(
             api_key = credentials.get("apollo")
             # Defensive check: ensure we get a string, not a complex object
             if api_key is not None and not isinstance(api_key, str):
-                raise TypeError(
-                    f"Expected string from credentials.get('apollo'), got {type(api_key).__name__}"
-                )
+                raise TypeError(f"Expected string from credentials.get('apollo'), got {type(api_key).__name__}")
             return api_key
         return os.getenv("APOLLO_API_KEY")
 
@@ -521,6 +609,89 @@ def register_tools(
                 technologies=technologies,
                 limit=limit,
             )
+        except httpx.TimeoutException:
+            return {"error": "Request timed out"}
+        except httpx.RequestError as e:
+            return {"error": f"Network error: {e}"}
+
+    # --- Person Activities ---
+
+    @mcp.tool()
+    def apollo_get_person_activities(person_id: str) -> dict:
+        """
+        Get activity history for a person in Apollo (emails, calls, tasks).
+
+        Args:
+            person_id: Apollo person/contact ID (required)
+
+        Returns:
+            Dict with activities list (type, subject, body, status, timestamps)
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        if not person_id:
+            return {"error": "person_id is required"}
+        try:
+            return client.get_person_activities(person_id)
+        except httpx.TimeoutException:
+            return {"error": "Request timed out"}
+        except httpx.RequestError as e:
+            return {"error": f"Network error: {e}"}
+
+    # --- Email Accounts ---
+
+    @mcp.tool()
+    def apollo_list_email_accounts() -> dict:
+        """
+        List email accounts connected to Apollo for sending sequences.
+
+        Returns:
+            Dict with email accounts (email, type, active, daily limit, sent today)
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        try:
+            return client.list_email_accounts()
+        except httpx.TimeoutException:
+            return {"error": "Request timed out"}
+        except httpx.RequestError as e:
+            return {"error": f"Network error: {e}"}
+
+    # --- Bulk Enrichment ---
+
+    @mcp.tool()
+    def apollo_bulk_enrich_people(details_json: str) -> dict:
+        """
+        Bulk enrich up to 10 people at once by email or domain+name.
+
+        Args:
+            details_json: JSON array of objects, each with lookup keys.
+                e.g. '[{"email": "john@acme.com"},
+                {"first_name": "Jane", "last_name": "Doe", "domain": "acme.com"}]'
+
+        Returns:
+            Dict with enrichment results for each person
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        if not details_json:
+            return {"error": "details_json is required"}
+
+        import json
+
+        try:
+            details = json.loads(details_json)
+        except json.JSONDecodeError:
+            return {"error": "details_json must be valid JSON"}
+        if not isinstance(details, list) or len(details) == 0:
+            return {"error": "details_json must be a non-empty JSON array"}
+        if len(details) > 10:
+            return {"error": "maximum 10 people per bulk request"}
+        try:
+            return client.bulk_enrich_people(details)
         except httpx.TimeoutException:
             return {"error": "Request timed out"}
         except httpx.RequestError as e:

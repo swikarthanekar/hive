@@ -18,16 +18,14 @@ INTERCOM_CREDENTIALS = {
             "intercom_add_tag",
             "intercom_assign_conversation",
             "intercom_list_teams",
+            "intercom_close_conversation",
+            "intercom_create_contact",
+            "intercom_list_conversations",
         ],
         required=True,
         startup_required=False,
-        help_url=(
-            "https://developers.intercom.com/docs/build-an-integration/learn-more/authentication"
-        ),
-        description=(
-            "Intercom access token (Settings > Integrations"
-            " > Developer Hub > Your App > Authentication)"
-        ),
+        help_url=("https://developers.intercom.com/docs/build-an-integration/learn-more/authentication"),
+        description=("Intercom access token (Settings > Integrations > Developer Hub > Your App > Authentication)"),
         # Auth method support
         aden_supported=False,
         direct_api_key_supported=True,

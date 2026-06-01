@@ -40,7 +40,6 @@ Credential categories:
 - discord.py: Discord bot credentials
 - github.py: GitHub API credentials
 - google_analytics.py: Google Analytics 4 Data API credentials
-- google_docs.py: Google Docs API credentials
 - google_maps.py: Google Maps Platform credentials
 - hubspot.py: HubSpot CRM credentials
 - intercom.py: Intercom customer messaging credentials
@@ -71,17 +70,18 @@ from .brevo import BREVO_CREDENTIALS
 from .browser import get_aden_auth_url, get_aden_setup_url, open_browser
 from .calcom import CALCOM_CREDENTIALS
 from .calendly import CALENDLY_CREDENTIALS
+from .cloudflare import CLOUDFLARE_CREDENTIALS
 from .cloudinary import CLOUDINARY_CREDENTIALS
 from .confluence import CONFLUENCE_CREDENTIALS
 from .databricks import DATABRICKS_CREDENTIALS
 from .discord import DISCORD_CREDENTIALS
 from .docker_hub import DOCKER_HUB_CREDENTIALS
 from .email import EMAIL_CREDENTIALS
+from .freshdesk import FRESHDESK_CREDENTIALS
 from .gcp_vision import GCP_VISION_CREDENTIALS
 from .github import GITHUB_CREDENTIALS
 from .gitlab import GITLAB_CREDENTIALS
 from .google_analytics import GOOGLE_ANALYTICS_CREDENTIALS
-from .google_docs import GOOGLE_DOCS_CREDENTIALS
 from .google_maps import GOOGLE_MAPS_CREDENTIALS
 from .google_search_console import GOOGLE_SEARCH_CONSOLE_CREDENTIALS
 from .greenhouse import GREENHOUSE_CREDENTIALS
@@ -97,6 +97,7 @@ from .kafka import KAFKA_CREDENTIALS
 from .langfuse import LANGFUSE_CREDENTIALS
 from .linear import LINEAR_CREDENTIALS
 from .lusha import LUSHA_CREDENTIALS
+from .mattermost import MATTERMOST_CREDENTIALS
 from .microsoft_graph import MICROSOFT_GRAPH_CREDENTIALS
 from .mongodb import MONGODB_CREDENTIALS
 from .n8n import N8N_CREDENTIALS
@@ -109,6 +110,7 @@ from .pipedrive import PIPEDRIVE_CREDENTIALS
 from .plaid import PLAID_CREDENTIALS
 from .postgres import POSTGRES_CREDENTIALS
 from .powerbi import POWERBI_CREDENTIALS
+from .prometheus import PROMETHEUS_CREDENTIALS
 from .pushover import PUSHOVER_CREDENTIALS
 from .quickbooks import QUICKBOOKS_CREDENTIALS
 from .razorpay import RAZORPAY_CREDENTIALS
@@ -126,6 +128,7 @@ from .shell_config import (
     get_shell_source_command,
 )
 from .shopify import SHOPIFY_CREDENTIALS
+from .similarweb import SIMILARWEB_CREDENTIALS
 from .slack import SLACK_CREDENTIALS
 from .snowflake import SNOWFLAKE_CREDENTIALS
 from .store_adapter import CredentialStoreAdapter
@@ -138,6 +141,7 @@ from .trello import TRELLO_CREDENTIALS
 from .twilio import TWILIO_CREDENTIALS
 from .twitter import TWITTER_CREDENTIALS
 from .vercel import VERCEL_CREDENTIALS
+from .wandb import WANDB_CREDENTIALS
 from .youtube import YOUTUBE_CREDENTIALS
 from .zendesk import ZENDESK_CREDENTIALS
 from .zoho_crm import ZOHO_CRM_CREDENTIALS
@@ -160,6 +164,7 @@ CREDENTIAL_SPECS = {
     **BREVO_CREDENTIALS,
     **CALCOM_CREDENTIALS,
     **CALENDLY_CREDENTIALS,
+    **CLOUDFLARE_CREDENTIALS,
     **CLOUDINARY_CREDENTIALS,
     **CONFLUENCE_CREDENTIALS,
     **DATABRICKS_CREDENTIALS,
@@ -171,7 +176,6 @@ CREDENTIAL_SPECS = {
     **GREENHOUSE_CREDENTIALS,
     **GITLAB_CREDENTIALS,
     **GOOGLE_ANALYTICS_CREDENTIALS,
-    **GOOGLE_DOCS_CREDENTIALS,
     **GOOGLE_MAPS_CREDENTIALS,
     **GOOGLE_SEARCH_CONSOLE_CREDENTIALS,
     **HUBSPOT_CREDENTIALS,
@@ -182,6 +186,7 @@ CREDENTIAL_SPECS = {
     **LANGFUSE_CREDENTIALS,
     **LINEAR_CREDENTIALS,
     **LUSHA_CREDENTIALS,
+    **MATTERMOST_CREDENTIALS,
     **MICROSOFT_GRAPH_CREDENTIALS,
     **MONGODB_CREDENTIALS,
     **N8N_CREDENTIALS,
@@ -194,6 +199,7 @@ CREDENTIAL_SPECS = {
     **PLAID_CREDENTIALS,
     **POSTGRES_CREDENTIALS,
     **POWERBI_CREDENTIALS,
+    **PROMETHEUS_CREDENTIALS,
     **PUSHOVER_CREDENTIALS,
     **QUICKBOOKS_CREDENTIALS,
     **RAZORPAY_CREDENTIALS,
@@ -204,6 +210,7 @@ CREDENTIAL_SPECS = {
     **SAP_CREDENTIALS,
     **SEARCH_CREDENTIALS,
     **SERPAPI_CREDENTIALS,
+    **SIMILARWEB_CREDENTIALS,
     **SHOPIFY_CREDENTIALS,
     **SLACK_CREDENTIALS,
     **SNOWFLAKE_CREDENTIALS,
@@ -217,9 +224,11 @@ CREDENTIAL_SPECS = {
     **TWITTER_CREDENTIALS,
     **VERCEL_CREDENTIALS,
     **YOUTUBE_CREDENTIALS,
+    **WANDB_CREDENTIALS,
     **ZENDESK_CREDENTIALS,
     **ZOHO_CRM_CREDENTIALS,
     **ZOOM_CREDENTIALS,
+    **FRESHDESK_CREDENTIALS,
 }
 
 __all__ = [
@@ -253,6 +262,7 @@ __all__ = [
     "BREVO_CREDENTIALS",
     "CALCOM_CREDENTIALS",
     "CALENDLY_CREDENTIALS",
+    "CLOUDFLARE_CREDENTIALS",
     "CLOUDINARY_CREDENTIALS",
     "CONFLUENCE_CREDENTIALS",
     "DATABRICKS_CREDENTIALS",
@@ -264,7 +274,6 @@ __all__ = [
     "GREENHOUSE_CREDENTIALS",
     "GITLAB_CREDENTIALS",
     "GOOGLE_ANALYTICS_CREDENTIALS",
-    "GOOGLE_DOCS_CREDENTIALS",
     "GOOGLE_MAPS_CREDENTIALS",
     "GOOGLE_SEARCH_CONSOLE_CREDENTIALS",
     "HUBSPOT_CREDENTIALS",
@@ -275,6 +284,7 @@ __all__ = [
     "LANGFUSE_CREDENTIALS",
     "LINEAR_CREDENTIALS",
     "LUSHA_CREDENTIALS",
+    "MATTERMOST_CREDENTIALS",
     "MICROSOFT_GRAPH_CREDENTIALS",
     "MONGODB_CREDENTIALS",
     "N8N_CREDENTIALS",
@@ -287,6 +297,7 @@ __all__ = [
     "PLAID_CREDENTIALS",
     "POSTGRES_CREDENTIALS",
     "POWERBI_CREDENTIALS",
+    "PROMETHEUS_CREDENTIALS",
     "PUSHOVER_CREDENTIALS",
     "QUICKBOOKS_CREDENTIALS",
     "RAZORPAY_CREDENTIALS",
@@ -297,6 +308,7 @@ __all__ = [
     "SAP_CREDENTIALS",
     "SEARCH_CREDENTIALS",
     "SERPAPI_CREDENTIALS",
+    "SIMILARWEB_CREDENTIALS",
     "SHOPIFY_CREDENTIALS",
     "SLACK_CREDENTIALS",
     "SNOWFLAKE_CREDENTIALS",
@@ -309,8 +321,10 @@ __all__ = [
     "TWILIO_CREDENTIALS",
     "TWITTER_CREDENTIALS",
     "VERCEL_CREDENTIALS",
+    "WANDB_CREDENTIALS",
     "YOUTUBE_CREDENTIALS",
     "ZENDESK_CREDENTIALS",
     "ZOHO_CRM_CREDENTIALS",
     "ZOOM_CREDENTIALS",
+    "FRESHDESK_CREDENTIALS",
 ]

@@ -19,7 +19,7 @@ then run with pytest and debugged with LLM assistance.
 
 ## MCP Tools
 
-Testing tools are integrated into the main agent_builder_server.py:
+Testing tools are available via the package generator:
 - generate_constraint_tests, generate_success_tests (return guidelines)
 - run_tests, debug_test, list_tests
 
@@ -46,9 +46,6 @@ from framework.testing.approval_types import (
 
 # Error categorization
 from framework.testing.categorizer import ErrorCategorizer
-
-# CLI
-from framework.testing.cli import register_testing_commands
 
 # Debug
 from framework.testing.debug_tool import DebugInfo, DebugTool
@@ -94,6 +91,4 @@ __all__ = [
     # Debug
     "DebugTool",
     "DebugInfo",
-    # CLI
-    "register_testing_commands",
 ]

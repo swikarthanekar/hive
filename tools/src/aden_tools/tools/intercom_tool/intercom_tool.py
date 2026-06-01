@@ -233,6 +233,69 @@ class _IntercomClient:
         )
         return self._handle_response(response)
 
+    def close_conversation(self, conversation_id: str, body: str = "") -> dict[str, Any]:
+        """Close a conversation."""
+        admin_id = self._get_admin_id()
+        if isinstance(admin_id, dict):
+            return admin_id
+        payload: dict[str, Any] = {
+            "type": "admin",
+            "admin_id": admin_id,
+            "message_type": "close",
+        }
+        if body:
+            payload["body"] = body
+        response = httpx.post(
+            f"{INTERCOM_API_BASE}/conversations/{conversation_id}/parts",
+            headers=self._headers,
+            json=payload,
+            timeout=30.0,
+        )
+        return self._handle_response(response)
+
+    def create_contact(
+        self,
+        role: str = "user",
+        email: str | None = None,
+        name: str | None = None,
+        phone: str | None = None,
+        external_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a new contact (user or lead)."""
+        payload: dict[str, Any] = {"role": role}
+        if email:
+            payload["email"] = email
+        if name:
+            payload["name"] = name
+        if phone:
+            payload["phone"] = phone
+        if external_id:
+            payload["external_id"] = external_id
+        response = httpx.post(
+            f"{INTERCOM_API_BASE}/contacts",
+            headers=self._headers,
+            json=payload,
+            timeout=30.0,
+        )
+        return self._handle_response(response)
+
+    def list_conversations(
+        self,
+        limit: int = 20,
+        starting_after: str | None = None,
+    ) -> dict[str, Any]:
+        """List conversations with pagination."""
+        params: dict[str, Any] = {"per_page": min(limit, 150), "display_as": "plaintext"}
+        if starting_after:
+            params["starting_after"] = starting_after
+        response = httpx.get(
+            f"{INTERCOM_API_BASE}/conversations",
+            headers=self._headers,
+            params=params,
+            timeout=30.0,
+        )
+        return self._handle_response(response)
+
 
 def register_tools(
     mcp: FastMCP,
@@ -246,9 +309,7 @@ def register_tools(
             token = credentials.get("intercom")
             # Defensive check: ensure we get a string, not a complex object
             if token is not None and not isinstance(token, str):
-                raise TypeError(
-                    f"Expected string from credentials.get('intercom'), got {type(token).__name__}"
-                )
+                raise TypeError(f"Expected string from credentials.get('intercom'), got {type(token).__name__}")
             return token
         return os.getenv("INTERCOM_ACCESS_TOKEN")
 
@@ -258,10 +319,7 @@ def register_tools(
         if not token:
             return {
                 "error": "Intercom credentials not configured",
-                "help": (
-                    "Set INTERCOM_ACCESS_TOKEN environment variable "
-                    "or configure via credential store"
-                ),
+                "help": ("Set INTERCOM_ACCESS_TOKEN environment variable or configure via credential store"),
             }
         return _IntercomClient(token)
 
@@ -331,11 +389,7 @@ def register_tools(
                         dt = dt.replace(tzinfo=UTC)
                     ts = int(dt.timestamp())
                 except ValueError:
-                    return {
-                        "error": (
-                            "created_after must be a valid ISO date string (e.g., '2026-01-15')"
-                        )
-                    }
+                    return {"error": ("created_after must be a valid ISO date string (e.g., '2026-01-15')")}
                 filters.append({"field": "created_at", "operator": ">", "value": ts})
 
             # Build query from filters
@@ -538,9 +592,7 @@ def register_tools(
         if assignee_type not in ("admin", "team"):
             return {"error": "assignee_type must be 'admin' or 'team'"}
         try:
-            return client.assign_conversation(
-                conversation_id, assignee_id, assignee_type=assignee_type, body=body
-            )
+            return client.assign_conversation(conversation_id, assignee_id, assignee_type=assignee_type, body=body)
         except httpx.TimeoutException:
             return {"error": "Request timed out"}
         except httpx.RequestError as e:
@@ -554,6 +606,100 @@ def register_tools(
             return client
         try:
             return client.list_teams()
+        except httpx.TimeoutException:
+            return {"error": "Request timed out"}
+        except httpx.RequestError as e:
+            return {"error": f"Network error: {e}"}
+
+    @mcp.tool()
+    def intercom_close_conversation(
+        conversation_id: str,
+        body: str = "",
+    ) -> dict:
+        """
+        Close an Intercom conversation.
+
+        Args:
+            conversation_id: Intercom conversation ID (required)
+            body: Optional closing message to the customer
+
+        Returns:
+            Dict with updated conversation or error
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        if not conversation_id:
+            return {"error": "conversation_id is required"}
+        try:
+            return client.close_conversation(conversation_id, body=body)
+        except httpx.TimeoutException:
+            return {"error": "Request timed out"}
+        except httpx.RequestError as e:
+            return {"error": f"Network error: {e}"}
+
+    @mcp.tool()
+    def intercom_create_contact(
+        role: str = "user",
+        email: str = "",
+        name: str = "",
+        phone: str = "",
+        external_id: str = "",
+    ) -> dict:
+        """
+        Create a new Intercom contact (user or lead).
+
+        Args:
+            role: Contact role - "user" or "lead" (default "user")
+            email: Contact email address (optional but recommended)
+            name: Contact full name (optional)
+            phone: Contact phone number (optional)
+            external_id: Your system's unique ID for this contact (optional)
+
+        Returns:
+            Dict with created contact details or error
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        if role not in ("user", "lead"):
+            return {"error": "role must be 'user' or 'lead'"}
+        try:
+            return client.create_contact(
+                role=role,
+                email=email or None,
+                name=name or None,
+                phone=phone or None,
+                external_id=external_id or None,
+            )
+        except httpx.TimeoutException:
+            return {"error": "Request timed out"}
+        except httpx.RequestError as e:
+            return {"error": f"Network error: {e}"}
+
+    @mcp.tool()
+    def intercom_list_conversations(
+        limit: int = 20,
+        starting_after: str = "",
+    ) -> dict:
+        """
+        List Intercom conversations with pagination.
+
+        Args:
+            limit: Max conversations per page (1-150, default 20)
+            starting_after: Cursor for pagination from previous response (optional)
+
+        Returns:
+            Dict with conversations list and pagination info
+        """
+        client = _get_client()
+        if isinstance(client, dict):
+            return client
+        try:
+            return client.list_conversations(
+                limit=limit,
+                starting_after=starting_after or None,
+            )
         except httpx.TimeoutException:
             return {"error": "Request timed out"}
         except httpx.RequestError as e:

@@ -66,6 +66,7 @@ class TestHealthCheckerRegistry:
             "brevo",
             "calcom",
             "calendly_pat",
+            "cloudflare",
             "discord",
             "docker_hub",
             "exa_search",
@@ -73,7 +74,6 @@ class TestHealthCheckerRegistry:
             "github",
             "gitlab_token",
             "google",
-            "google_docs",
             "google_maps",
             "google_search",
             "google_search_console",
@@ -85,11 +85,13 @@ class TestHealthCheckerRegistry:
             "lusha_api_key",
             "microsoft_graph",
             "newsdata",
-            "notion_token",
+            "notion",
             "pinecone",
             "pipedrive",
+            "prometheus",
             "resend",
             "serpapi",
+            "similarweb",
             "slack",
             "stripe",
             "telegram",
@@ -270,9 +272,7 @@ class TestGoogleMapsHealthChecker:
         mock_client = MagicMock()
         mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_client)
         mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
-        mock_client.get.return_value = self._mock_response(
-            200, {"status": "REQUEST_DENIED", "results": []}
-        )
+        mock_client.get.return_value = self._mock_response(200, {"status": "REQUEST_DENIED", "results": []})
 
         checker = GoogleMapsHealthChecker()
         result = checker.check("invalid-key")
@@ -285,9 +285,7 @@ class TestGoogleMapsHealthChecker:
         mock_client = MagicMock()
         mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_client)
         mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
-        mock_client.get.return_value = self._mock_response(
-            200, {"status": "OVER_QUERY_LIMIT", "results": []}
-        )
+        mock_client.get.return_value = self._mock_response(200, {"status": "OVER_QUERY_LIMIT", "results": []})
 
         checker = GoogleMapsHealthChecker()
         result = checker.check("test-api-key")
@@ -578,9 +576,7 @@ class TestGoogleHealthChecker:
 
         with patch("aden_tools.credentials.health_check.httpx.Client") as mock_client_cls:
             mock_client = self._setup_mock_client(mock_client_cls)
-            mock_client.get.side_effect = httpx.RequestError(
-                "Connection failed with Bearer ya29.secret-token-here"
-            )
+            mock_client.get.side_effect = httpx.RequestError("Connection failed with Bearer ya29.secret-token-here")
 
             result = checker.check("ya29.secret-token-here")
 

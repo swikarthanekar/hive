@@ -31,9 +31,7 @@ class TestSendEmail:
         monkeypatch.delenv("GOOGLE_ACCESS_TOKEN", raising=False)
         monkeypatch.setenv("EMAIL_FROM", "test@example.com")
 
-        result = send_email_fn(
-            to="test@example.com", subject="Test", html="<p>Hi</p>", provider="gmail"
-        )
+        result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="gmail")
 
         assert "error" in result
         assert "Gmail credentials not configured" in result["error"]
@@ -45,9 +43,7 @@ class TestSendEmail:
         monkeypatch.delenv("GOOGLE_ACCESS_TOKEN", raising=False)
         monkeypatch.setenv("EMAIL_FROM", "test@example.com")
 
-        result = send_email_fn(
-            to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-        )
+        result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         assert "error" in result
         assert "Resend credentials not configured" in result["error"]
@@ -59,9 +55,7 @@ class TestSendEmail:
         monkeypatch.delenv("GOOGLE_ACCESS_TOKEN", raising=False)
         monkeypatch.delenv("EMAIL_FROM", raising=False)
 
-        result = send_email_fn(
-            to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-        )
+        result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         assert "error" in result
         assert "Sender email is required" in result["error"]
@@ -74,9 +68,7 @@ class TestSendEmail:
 
         with patch("resend.Emails.send") as mock_send:
             mock_send.return_value = {"id": "email_env"}
-            result = send_email_fn(
-                to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-            )
+            result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         assert result["success"] is True
         call_args = mock_send.call_args[0][0]
@@ -115,9 +107,7 @@ class TestSendEmail:
         monkeypatch.setenv("RESEND_API_KEY", "re_test_key")
         monkeypatch.setenv("EMAIL_FROM", "test@example.com")
 
-        result = send_email_fn(
-            to="test@example.com", subject="", html="<p>Hi</p>", provider="resend"
-        )
+        result = send_email_fn(to="test@example.com", subject="", html="<p>Hi</p>", provider="resend")
 
         assert "error" in result
 
@@ -126,9 +116,7 @@ class TestSendEmail:
         monkeypatch.setenv("RESEND_API_KEY", "re_test_key")
         monkeypatch.setenv("EMAIL_FROM", "test@example.com")
 
-        result = send_email_fn(
-            to="test@example.com", subject="x" * 999, html="<p>Hi</p>", provider="resend"
-        )
+        result = send_email_fn(to="test@example.com", subject="x" * 999, html="<p>Hi</p>", provider="resend")
 
         assert "error" in result
 
@@ -148,9 +136,7 @@ class TestSendEmail:
 
         with patch("resend.Emails.send") as mock_send:
             mock_send.return_value = {"id": "email_123"}
-            result = send_email_fn(
-                to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-            )
+            result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         assert result["success"] is True
         mock_send.assert_called_once()
@@ -238,9 +224,7 @@ class TestSendEmail:
 
         with patch("resend.Emails.send") as mock_send:
             mock_send.return_value = {"id": "email_no_cc"}
-            send_email_fn(
-                to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-            )
+            send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         call_args = mock_send.call_args[0][0]
         assert "cc" not in call_args
@@ -273,9 +257,7 @@ class TestSendEmail:
 
         with patch("resend.Emails.send") as mock_send:
             mock_send.return_value = {"id": "email_ws_cc"}
-            send_email_fn(
-                to="test@example.com", subject="Test", html="<p>Hi</p>", cc="   ", provider="resend"
-            )
+            send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", cc="   ", provider="resend")
 
         call_args = mock_send.call_args[0][0]
         assert "cc" not in call_args
@@ -349,9 +331,7 @@ class TestResendProvider:
 
         with patch("resend.Emails.send") as mock_send:
             mock_send.return_value = {"id": "email_789"}
-            result = send_email_fn(
-                to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-            )
+            result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         assert result["success"] is True
         assert result["provider"] == "resend"
@@ -364,9 +344,7 @@ class TestResendProvider:
 
         with patch("resend.Emails.send") as mock_send:
             mock_send.side_effect = Exception("API rate limit exceeded")
-            result = send_email_fn(
-                to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend"
-            )
+            result = send_email_fn(to="test@example.com", subject="Test", html="<p>Hi</p>", provider="resend")
 
         assert "error" in result
 
@@ -501,19 +479,26 @@ _HTTPX_GET = "aden_tools.tools.email_tool.email_tool.httpx.get"
 _HTTPX_POST = "aden_tools.tools.email_tool.email_tool.httpx.post"
 
 
-def _mock_original_message_response():
-    """Helper: mock response for fetching the original message."""
+def _mock_original_message_response(body_html: str = "<p>Original message body</p>"):
+    """Helper: mock response for fetching the original message (format=full)."""
+    import base64
+
     resp = MagicMock()
     resp.status_code = 200
     resp.json.return_value = {
         "id": "orig_123",
         "threadId": "thread_abc",
         "payload": {
+            "mimeType": "text/html",
             "headers": [
                 {"name": "Message-ID", "value": "<orig@mail.gmail.com>"},
                 {"name": "Subject", "value": "Hello there"},
                 {"name": "From", "value": "sender@example.com"},
-            ]
+                {"name": "Date", "value": "Mon, 1 Jan 2024 12:00:00 +0000"},
+            ],
+            "body": {
+                "data": base64.urlsafe_b64encode(body_html.encode()).decode(),
+            },
         },
     }
     return resp
@@ -666,3 +651,29 @@ class TestGmailReplyEmail:
 
         assert "error" in result
         assert "403" in result["error"]
+
+    def test_reply_includes_quoted_original(self, reply_email_fn, monkeypatch):
+        """Reply body includes a blockquote with the original message content."""
+        import base64
+
+        monkeypatch.setenv("GOOGLE_ACCESS_TOKEN", "test_token")
+
+        original_body = "<p>This is the original email content</p>"
+        mock_get_resp = _mock_original_message_response(body_html=original_body)
+        mock_send_resp = MagicMock()
+        mock_send_resp.status_code = 200
+        mock_send_resp.json.return_value = {"id": "reply_456", "threadId": "thread_abc"}
+
+        with patch(_HTTPX_GET, return_value=mock_get_resp):
+            with patch(_HTTPX_POST, return_value=mock_send_resp) as mock_post:
+                result = reply_email_fn(message_id="orig_123", html="<p>My reply</p>")
+
+        assert result["success"] is True
+
+        # Decode the raw MIME to verify the quoted body is present
+        raw_b64 = mock_post.call_args[1]["json"]["raw"]
+        raw_bytes = base64.urlsafe_b64decode(raw_b64)
+        raw_str = raw_bytes.decode("utf-8", errors="replace")
+        assert "<blockquote" in raw_str
+        assert "This is the original email content" in raw_str
+        assert "sender@example.com wrote:" in raw_str

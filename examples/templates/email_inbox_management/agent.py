@@ -2,15 +2,15 @@
 
 from pathlib import Path
 
-from framework.graph import EdgeCondition, EdgeSpec, Goal, SuccessCriterion, Constraint
-from framework.graph.checkpoint_config import CheckpointConfig
-from framework.graph.edge import AsyncEntryPointSpec, GraphSpec
-from framework.graph.executor import ExecutionResult, GraphExecutor
+from framework.orchestrator import EdgeCondition, EdgeSpec, Goal, SuccessCriterion, Constraint
+from framework.orchestrator.checkpoint_config import CheckpointConfig
+from framework.orchestrator.edge import GraphSpec
+from framework.orchestrator.orchestrator import ExecutionResult, Orchestrator
 from framework.llm import LiteLLMProvider
-from framework.runner.tool_registry import ToolRegistry
-from framework.runtime.agent_runtime import create_agent_runtime
-from framework.runtime.event_bus import EventBus
-from framework.runtime.execution_stream import EntryPointSpec
+from framework.loader.tool_registry import ToolRegistry
+from framework.host.agent_host import AgentHost
+from framework.host.event_bus import EventBus
+from framework.host.execution_manager import EntryPointSpec
 
 from .config import default_config, metadata
 from .nodes import (
@@ -34,10 +34,7 @@ goal = Goal(
     success_criteria=[
         SuccessCriterion(
             id="correct-action-execution",
-            description=(
-                "Gmail actions are applied correctly to the right emails "
-                "based on the user's rules"
-            ),
+            description=("Gmail actions are applied correctly to the right emails based on the user's rules"),
             metric="action_correctness",
             target=">=95%",
             weight=0.30,
@@ -55,8 +52,7 @@ goal = Goal(
         SuccessCriterion(
             id="batch-completeness",
             description=(
-                "All fetched emails up to the configured max are processed and acted upon; "
-                "none are silently skipped"
+                "All fetched emails up to the configured max are processed and acted upon; none are silently skipped"
             ),
             metric="emails_processed_ratio",
             target="100%",
@@ -83,8 +79,7 @@ goal = Goal(
         Constraint(
             id="non-destructive-default",
             description=(
-                "Archiving removes from inbox but preserves the email; only explicit "
-                "trash rules move emails to trash"
+                "Archiving removes from inbox but preserves the email; only explicit trash rules move emails to trash"
             ),
             constraint_type="hard",
             category="safety",
@@ -152,17 +147,6 @@ edges = [
 # Graph configuration
 entry_node = "intake"
 entry_points = {"start": "intake"}
-async_entry_points = [
-    AsyncEntryPointSpec(
-        id="email-timer",
-        name="Scheduled Inbox Check",
-        entry_node="fetch-emails",
-        trigger_type="timer",
-        trigger_config={"interval_minutes": 5},
-        isolation_level="shared",
-        max_concurrent=1,
-    ),
-]
 pause_nodes = []
 terminal_nodes = []
 loop_config = {
@@ -202,7 +186,7 @@ class EmailInboxManagementAgent:
         self.entry_points = entry_points
         self.pause_nodes = pause_nodes
         self.terminal_nodes = terminal_nodes
-        self._executor: GraphExecutor | None = None
+        self._executor: Orchestrator | None = None
         self._graph: GraphSpec | None = None
         self._event_bus: EventBus | None = None
         self._tool_registry: ToolRegistry | None = None
@@ -224,7 +208,6 @@ class EmailInboxManagementAgent:
             loop_config=loop_config,
             conversation_mode=conversation_mode,
             identity_prompt=identity_prompt,
-            async_entry_points=async_entry_points,
         )
 
     def _setup(self, mock_mode=False) -> None:
@@ -275,19 +258,9 @@ class EmailInboxManagementAgent:
                 trigger_type="manual",
                 isolation_level="shared",
             ),
-            # Timer-driven entry point
-            EntryPointSpec(
-                id="email-timer",
-                name="Scheduled Inbox Check",
-                entry_node="fetch-emails",
-                trigger_type="timer",
-                trigger_config={"interval_minutes": 5},
-                isolation_level="shared",
-                max_concurrent=1,
-            ),
         ]
 
-        self._agent_runtime = create_agent_runtime(
+        self._agent_runtime = AgentHost(
             graph=self._graph,
             goal=self.goal,
             storage_path=self._storage_path,
@@ -330,15 +303,11 @@ class EmailInboxManagementAgent:
             session_state=session_state,
         )
 
-    async def run(
-        self, context: dict, mock_mode=False, session_state=None
-    ) -> ExecutionResult:
+    async def run(self, context: dict, mock_mode=False, session_state=None) -> ExecutionResult:
         """Run the agent (convenience method for single execution)."""
         await self.start(mock_mode=mock_mode)
         try:
-            result = await self.trigger_and_wait(
-                "default", context, session_state=session_state
-            )
+            result = await self.trigger_and_wait("default", context, session_state=session_state)
             return result or ExecutionResult(success=False, error="Execution timeout")
         finally:
             await self.stop()
@@ -360,10 +329,6 @@ class EmailInboxManagementAgent:
             "pause_nodes": self.pause_nodes,
             "terminal_nodes": self.terminal_nodes,
             "client_facing_nodes": [n.id for n in self.nodes if n.client_facing],
-            "async_entry_points": [
-                {"id": ep.id, "name": ep.name, "entry_node": ep.entry_node}
-                for ep in async_entry_points
-            ],
         }
 
     def validate(self):
@@ -387,16 +352,7 @@ class EmailInboxManagementAgent:
 
         for ep_id, node_id in self.entry_points.items():
             if node_id not in node_ids:
-                errors.append(
-                    f"Entry point '{ep_id}' references unknown node '{node_id}'"
-                )
-
-        # Validate async entry points
-        for ep in async_entry_points:
-            if ep.entry_node not in node_ids:
-                errors.append(
-                    f"Async entry point '{ep.id}' references unknown node '{ep.entry_node}'"
-                )
+                errors.append(f"Entry point '{ep_id}' references unknown node '{node_id}'")
 
         return {
             "valid": len(errors) == 0,
